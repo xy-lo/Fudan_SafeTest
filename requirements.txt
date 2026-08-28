@@ -1,0 +1,3 @@
+selenium==4.36.0
+rapidfuzz==3.13.0
+beautifulsoup4==4.15.0

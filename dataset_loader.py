@@ -2,10 +2,10 @@ from typing import List
 
 from bs4 import BeautifulSoup
 import re
-from selenium import webdriver
+from selenium.webdriver.common.by import By
 
-from cookie_engine import driver_get_with_cookies
-from environment import dataset_path, driver_path, main_page
+from cookie_engine import close_driver, driver_get_with_cookies
+from environment import dataset_path, main_page
 from operation_engine import goto_result
 from question import Question
 from question_engine import load_question_list
@@ -33,10 +33,10 @@ def web_load() -> List[Question]:
     driver = driver_get_with_cookies(main_page)
     try:
         goto_result(driver)
-        body = driver.find_elements_by_class_name("panel-group")[0]
+        body = driver.find_elements(By.CLASS_NAME, "panel-group")[0]
         result_text = body.text.replace("\n", "")
     finally:
-        driver.quit()
+        close_driver(driver)
     return get_questions_from_text(result_text)
 
 

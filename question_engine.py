@@ -13,8 +13,12 @@ def question_list_merge(a: List[Question], b: List[Question]):
 
 
 def save_question_list(question_list: List[Question], path):
-    with open(path, 'w') as f:
-        f.write(json.dumps([question.to_dict() for question in question_list]))
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(json.dumps(
+            [question.to_dict() for question in question_list],
+            ensure_ascii=False,
+            indent=2,
+        ))
 
 
 def load_question_list(path):
