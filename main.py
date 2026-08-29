@@ -5,18 +5,14 @@ import sys
 from cookie_engine import close_driver, create_driver, driver_get_with_cookies
 from environment import keep_browser_open, main_page, question_path
 from operation_engine import answer_all_question, take_exam
-from question_engine import load_question_list
+from question_engine import load_question_list, validate_question_list
 
 
 def check_environment():
     questions = load_question_list(question_path)
     if not questions:
         raise RuntimeError("题库为空")
-    if any(
-        not item.stem or not item.answers or not item.correct_answers
-        for item in questions
-    ):
-        raise RuntimeError("题库中存在缺少题干、选项或答案的记录")
+    validate_question_list(questions)
 
     driver = create_driver()
     try:
@@ -44,6 +40,7 @@ def check_environment():
 
 def run_exam():
     question_result = load_question_list(question_path)
+    validate_question_list(question_result)
     question_dict = {
         question.stem: question
         for question in question_result

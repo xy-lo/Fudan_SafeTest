@@ -16,6 +16,25 @@ import cookie_engine
 
 
 class BrowserDetectionTests(unittest.TestCase):
+    def test_exam_site_detection_requires_exam_application_path(self):
+        class Browser:
+            current_url = "https://lsem.fudan.edu.cn/fd_aqks_new/index"
+
+        self.assertTrue(cookie_engine._on_fudan_exam_site(Browser()))
+        Browser.current_url = "https://lsem.fudan.edu.cn/wz/websit/index.jsp"
+        self.assertFalse(cookie_engine._on_fudan_exam_site(Browser()))
+        Browser.current_url = "https://id.fudan.edu.cn/ac/"
+        self.assertFalse(cookie_engine._on_fudan_exam_site(Browser()))
+
+    def test_exam_login_entry_uses_application_root(self):
+        self.assertEqual(
+            cookie_engine._exam_login_entry(
+                "https://lsem.fudan.edu.cn/fd_aqks_new/"
+                "examProgress/examBase/examIndex"
+            ),
+            "https://lsem.fudan.edu.cn/fd_aqks_new/index",
+        )
+
     def test_configured_browser_path_takes_priority(self):
         with tempfile.TemporaryDirectory() as directory:
             executable = Path(directory) / "browser"

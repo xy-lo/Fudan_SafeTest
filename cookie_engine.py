@@ -13,6 +13,7 @@ import time
 import urllib.request
 import warnings
 from pathlib import Path
+from urllib.parse import urlsplit
 
 warnings.filterwarnings(
     "ignore",
@@ -204,14 +205,25 @@ def close_driver(browser):
 
 
 def _on_fudan_exam_site(browser):
-    return "lsem.fudan.edu.cn" in browser.current_url and "authserver" not in browser.current_url
+    current = urlsplit(browser.current_url)
+    return (
+        current.hostname == "lsem.fudan.edu.cn"
+        and current.path.startswith("/fd_aqks_new/")
+    )
+
+
+def _exam_login_entry(url):
+    target = urlsplit(url)
+    return f"{target.scheme}://{target.netloc}/fd_aqks_new/index"
 
 
 def driver_get_with_cookies(url, path=None):
     """打开考试系统；首次运行时等待用户在浏览器内完成统一身份认证。"""
     browser = create_driver()
     try:
-        browser.get(url)
+        # 先经过考试系统统一入口。直接访问深层页面且会话过期时，
+        # 服务器可能重定向到公开网站而不是统一身份认证页面。
+        browser.get(_exam_login_entry(url))
 
         if not _on_fudan_exam_site(browser):
             print("\n首次运行：请在打开的浏览器中完成复旦统一身份认证。")
@@ -220,6 +232,8 @@ def driver_get_with_cookies(url, path=None):
         WebDriverWait(browser, int(_setting("login_wait_time", 300))).until(
             _on_fudan_exam_site
         )
+        if browser.current_url.rstrip("/") != url.rstrip("/"):
+            browser.get(url)
         WebDriverWait(browser, int(_setting("page_wait_time", 30))).until(
             lambda driver: driver.execute_script("return document.readyState")
             == "complete"

@@ -133,7 +133,7 @@ browser_binary = "/usr/bin/google-chrome"
 
 ## 题库与匹配策略
 
-默认题库位于 asset/questions.json，当前包含 99 条记录。脚本会：
+默认题库位于 asset/questions.json，当前包含 100 条记录，来自 2026-08-27 完成的校级考试卷（单选 30 题、多选 40 题、判断 30 题）。脚本会：
 
 1. 去除题号、空格和常见标点后匹配题干。
 2. 再次独立匹配页面选项。
@@ -148,6 +148,14 @@ browser_binary = "/usr/bin/google-chrome"
 ~~~bash
 python load_question.py
 ~~~
+
+合并时，同一题干以最新结果页中的选项和正确答案为准。若只想保留当前完成的这一套试卷：
+
+~~~bash
+python load_question.py --replace
+~~~
+
+写入前会检查重复题干、空题干、空选项、空答案及“正确答案不在选项中”等异常；解析或校验失败时不会写入题库。
 
 ## 环境检查与测试
 
@@ -167,7 +175,7 @@ bash run.sh --check
 python -m unittest discover -s tests -v
 ~~~
 
-测试覆盖浏览器路径探测、题干规范化和全部内置题库答案映射。
+测试覆盖浏览器路径探测、登录入口识别、成绩详情页解析、题库新旧记录合并、题干规范化和全部内置题库答案映射。
 
 ## 常见问题
 

@@ -2,7 +2,6 @@ from typing import List
 
 from bs4 import BeautifulSoup
 import re
-from selenium.webdriver.common.by import By
 
 from cookie_engine import close_driver, driver_get_with_cookies
 from environment import dataset_path, main_page
@@ -33,11 +32,63 @@ def web_load() -> List[Question]:
     driver = driver_get_with_cookies(main_page)
     try:
         goto_result(driver)
-        body = driver.find_elements(By.CLASS_NAME, "panel-group")[0]
-        result_text = body.text.replace("\n", "")
+        result_html = driver.page_source
     finally:
         close_driver(driver)
-    return get_questions_from_text(result_text)
+    return get_questions_from_result_html(result_html)
+
+
+def get_questions_from_result_html(raw_html) -> List[Question]:
+    """按当前成绩详情页的 DOM 结构解析题干、选项和正确答案。"""
+    def clean_text(node):
+        if node is None:
+            return ""
+        return re.sub(r"\s+", " ", node.get_text(" ", strip=True)).strip()
+
+    soup = BeautifulSoup(raw_html, "html.parser")
+    root = soup.select_one(".panel-group")
+    if root is None:
+        raise ValueError("成绩详情页中未找到题目区域")
+
+    questions = []
+    for block in root.select(".panel-body > .col-md-10"):
+        rows = [
+            item
+            for item in block.find_all("div", recursive=False)
+            if "row" in item.get("class", [])
+        ]
+        if not rows:
+            continue
+
+        stem = clean_text(rows[0].find("span"))
+        option_by_code = {}
+        correct_raw = ""
+
+        for row in rows[1:]:
+            labels = row.find_all("label", recursive=False)
+            spans = row.find_all("span", recursive=False)
+            key = clean_text(labels[0] if labels else None)
+            value = clean_text(spans[0] if spans else None)
+            option_match = re.fullmatch(r"选项([A-Z])", key)
+            if option_match:
+                option_by_code[option_match.group(1)] = value
+            elif key == "正确答案":
+                correct_raw = value
+
+        codes = re.findall(r"选项([A-Z])", correct_raw)
+        answers = [option_by_code[code] for code in sorted(option_by_code)]
+        correct_answers = [
+            option_by_code[code]
+            for code in codes
+            if code in option_by_code
+        ]
+        if not stem or not answers or len(correct_answers) != len(codes):
+            raise ValueError(f"成绩详情页题目解析不完整：{stem or '<空题干>'}")
+        questions.append(Question(stem, answers, correct_answers))
+
+    if not questions:
+        raise ValueError("成绩详情页未解析出任何题目")
+    return questions
 
 
 def get_questions_from_text(raw_text) -> List[Question]:
